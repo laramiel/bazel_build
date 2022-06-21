@@ -1,0 +1,232 @@
+# Description:
+#   Bazel BUILD file for libuv.
+#
+#   https://github.com/libuv/libuv/archive/v1.44.1.zip
+#
+package(default_visibility = ["//visibility:private"])
+
+licenses(["notice"])  # BSD
+
+
+COMMON_LIBUV_HEADERS = [
+    "include/uv.h",
+    "include/uv/errno.h",
+    "include/uv/threadpool.h",
+    "include/uv/version.h",
+    "include/uv/tree.h",
+]
+
+COMMON_LIBUV_HEADERS_S = [
+    "src/heap-inl.h",
+    "src/idna.h",
+    "src/queue.h",
+    "src/strscpy.h",
+    "src/uv-common.h",
+]
+
+UNIX_LIBUV_HEADERS = [
+    "include/uv/unix.h",
+]
+
+UNIX_LIBUV_HEADERS_S = [
+    "src/unix/atomic-ops.h",
+    "src/unix/internal.h",
+    "src/unix/spinlock.h",
+]
+
+LINUX_LIBUV_HEADERS = [
+    "include/uv/linux.h",
+]
+
+LINUX_LIBUV_HEADERS_S = [
+    "src/unix/linux-syscalls.h",
+]
+
+DARWIN_LIBUV_HEADERS = [
+    "include/uv/darwin.h",
+]
+
+DARWIN_LIBUV_HEADERS_S = [
+    "src/unix/darwin-stub.h",
+]
+
+WINDOWS_LIBUV_HEADERS = [
+    "include/uv/win.h",
+]
+
+WINDOWS_LIBUV_HEADERS_S = [
+    "src/win/atomicops-inl.h",
+    "src/win/fs-fd-hash-inl.h",
+    "src/win/handle-inl.h",
+    "src/win/internal.h",
+    "src/win/req-inl.h",
+    "src/win/stream-inl.h",
+    "src/win/winapi.h",
+    "src/win/winsock.h",
+]
+
+COMMON_LIBUV_SOURCES = [
+    "src/fs-poll.c",
+    "src/idna.c",
+    "src/inet.c",
+    "src/random.c",
+    "src/strscpy.c",
+    "src/threadpool.c",
+    "src/timer.c",
+    "src/uv-data-getter-setters.c",
+    "src/uv-common.c",
+    "src/version.c",
+]
+
+UNIX_LIBUV_SOURCES = [
+    "src/unix/async.c",
+    "src/unix/core.c",
+    "src/unix/dl.c",
+    "src/unix/fs.c",
+    "src/unix/getaddrinfo.c",
+    "src/unix/getnameinfo.c",
+    "src/unix/loop.c",
+    "src/unix/loop-watcher.c",
+    "src/unix/pipe.c",
+    "src/unix/poll.c",
+    "src/unix/process.c",
+    "src/unix/proctitle.c",
+    "src/unix/random-devurandom.c",
+    "src/unix/random-getentropy.c",
+    "src/unix/signal.c",
+    "src/unix/stream.c",
+    "src/unix/tcp.c",
+    "src/unix/thread.c",
+    "src/unix/tty.c",
+    "src/unix/udp.c",
+]
+
+LINUX_LIBUV_SOURCES = [
+    "src/unix/linux-core.c",
+    "src/unix/linux-inotify.c",
+    "src/unix/linux-syscalls.c",
+    "src/unix/procfs-exepath.c",
+    "src/unix/random-getrandom.c",
+    "src/unix/random-sysctl-linux.c",
+    "src/unix/epoll.c",
+]
+
+DARWIN_LIBUV_SOURCES = [
+    "src/unix/bsd-ifaddrs.c",
+    "src/unix/darwin.c",
+    "src/unix/darwin-proctitle.c",
+    "src/unix/fsevents.c",
+    "src/unix/kqueue.c",
+]
+
+WINDOWS_LIBUV_SOURCES = [
+    "src/win/async.c",
+    "src/win/core.c",
+    "src/win/detect-wakeup.c",
+    "src/win/dl.c",
+    "src/win/error.c",
+    "src/win/fs-event.c",
+    "src/win/fs.c",
+    "src/win/getaddrinfo.c",
+    "src/win/getnameinfo.c",
+    "src/win/handle.c",
+    "src/win/loop-watcher.c",
+    "src/win/pipe.c",
+    "src/win/poll.c",
+    "src/win/process-stdio.c",
+    "src/win/process.c",
+    "src/win/signal.c",
+    "src/win/stream.c",
+    "src/win/tcp.c",
+    "src/win/thread.c",
+    "src/win/tty.c",
+    "src/win/udp.c",
+    "src/win/util.c",
+    "src/win/winapi.c",
+    "src/win/winsock.c",
+]
+
+LIBUV_COPTS = select({
+    "@platforms//os:windows": [
+        "/W3",
+        "/wd4996",
+    ],
+    # Assume GCC by default.
+    "//conditions:default": [
+        "-pedantic",
+        "-pthread",
+        "-Wno-error",
+        "-Wno-implicit-function-declaration",
+        "-Wno-strict-aliasing",
+        "-Wno-unused-function",
+        "-Wno-unused-variable",
+        "-Wstrict-aliasing",
+    ],
+})
+
+cc_library(
+    name = "libuv",
+    srcs = COMMON_LIBUV_SOURCES +
+           select({
+               "@platforms//os:macos": UNIX_LIBUV_SOURCES + DARWIN_LIBUV_SOURCES,
+               "@platforms//os:windows": WINDOWS_LIBUV_SOURCES,
+               "//conditions:default": UNIX_LIBUV_SOURCES + LINUX_LIBUV_SOURCES,
+           }),
+    hdrs = COMMON_LIBUV_HEADERS +
+           select({
+               "@platforms//os:macos": UNIX_LIBUV_HEADERS + DARWIN_LIBUV_HEADERS,
+               "@platforms//os:windows": WINDOWS_LIBUV_HEADERS,
+               "//conditions:default": UNIX_LIBUV_HEADERS + LINUX_LIBUV_HEADERS,
+           }),
+    copts = LIBUV_COPTS,
+    linkopts = select({
+        "@platforms//os:windows": [
+            "-DEFAULTLIB:iphlpapi.lib",
+            "-DEFAULTLIB:psapi.lib",
+            "-DEFAULTLIB:user32.lib",
+            "-DEFAULTLIB:userenv.lib",
+        ],
+        "//conditions:default": ["-ldl"],
+    }),
+    local_defines = [
+        "_LARGEFILE_SOURCE",
+        "_FILE_OFFSET_BITS=64",
+        "_GNU_SOURCE",
+        "HAVE_CONFIG_H",
+    ] + select({
+        "@platforms//os:macos": [
+            "_LARGEFILE_SOURCE",
+            "_FILE_OFFSET_BITS=64",
+            "_DARWIN_USE_64_BIT_INODE=1",
+            "_DARWIN_UNLIMITED_SELECT=1",
+        ],
+        "@platforms//os:windows": [
+            "WIN32_LEAN_AND_MEAN",
+            "_WIN32_WINNT=0x0600",
+        ],
+        "//conditions:default": [
+            "_POSIX_C_SOURCE=200112",
+            "_LARGEFILE_SOURCE",
+            "_FILE_OFFSET_BITS=64",
+        ],
+    }),
+    visibility = ["//visibility:public"],
+    strip_include_prefix = "include",
+    deps = [
+        ":libuv_headers",
+    ],
+)
+
+cc_library(
+    name = "libuv_headers",
+    hdrs = COMMON_LIBUV_HEADERS + COMMON_LIBUV_HEADERS_S +
+           select({
+               "@platforms//os:macos": UNIX_LIBUV_HEADERS_S + DARWIN_LIBUV_HEADERS_S + UNIX_LIBUV_HEADERS + DARWIN_LIBUV_HEADERS,
+               "@platforms//os:windows": WINDOWS_LIBUV_HEADERS_S + WINDOWS_LIBUV_HEADERS,
+               "//conditions:default": UNIX_LIBUV_HEADERS_S + LINUX_LIBUV_HEADERS_S + UNIX_LIBUV_HEADERS + LINUX_LIBUV_HEADERS,
+           }),
+    includes = [
+        "include",
+        "src",
+    ],
+)
